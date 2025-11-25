@@ -1,4 +1,7 @@
-const API_BASE = import.meta.env.VITE_API_BASE ?? '';
+const isTest = typeof process !== 'undefined' && process.env.VITEST;
+
+const API_BASE =
+  import.meta.env.VITE_API_BASE ?? (isTest ? '' : import.meta.env.DEV ? 'http://localhost:8000' : '');
 
 async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_BASE}${url}`, {
