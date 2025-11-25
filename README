@@ -1,0 +1,369 @@
+# GD_v1 · Gestión de Dependencias TI (Jupyter + Excel)
+
+Herramienta en Python (Jupyter Notebook) para gestionar dependencias de proyectos TI
+utilizando como backend un archivo Excel corporativo (`GD_v1.xlsx`).
+
+Está pensada para células / trenes / CoE (modelo Telefónica), y permite:
+
+- Registrar proyectos y sus dependencias P/L entre equipos.
+- Consultar y editar avance + dependencias.
+- Calcular métricas agregadas por Tren y Célula.
+- Operar una **Mesa de Expertos** (priorización) y una **Mesa de Alistamiento (PO Sync)**.
+- Recoger feedback de usuarios directamente en una hoja de Excel.
+
+---
+
+## 1. Arquitectura general
+
+La solución actual está compuesta por:
+
+- **Python + Jupyter Notebook**  
+  Lógica de negocio, lectura/escritura a Excel y construcción de la UI con `ipywidgets`.
+
+- **Excel corporativo (`GD_v1.xlsx`)**
+  - Hoja `ProyectosTI`: base de proyectos, avance, dependencias y métricas.
+  - Hoja `Datos`: catálogos (estados, Q, responsables, áreas, iniciativas, mapping Tren ↔ Célula, etc.).
+  - Hoja `Sugerencias`: feedback de usuarios desde la propia app.
+
+- **UI en Jupyter (ipywidgets)**
+  - Pestañas para Alta, Consulta/Edición, Métricas, Mesas y Feedback.
+
+> Próximo paso: crear un repositorio y evolucionar este front con **React** usando Codex como “backend” / capa de servicios.
+
+---
+
+## 2. Requisitos
+
+- Python 3.x
+- Jupyter Notebook / JupyterLab
+- Paquetes Python:
+  - `openpyxl`
+  - `ipywidgets`
+  - `matplotlib`
+- Archivo de Excel con la estructura esperada:
+  - Ruta por defecto (Mac):  
+    `/Users/macuser/Desktop/DIR COMERCIAL/GD/GD_v1.xlsx`
+
+Puedes instalar las dependencias desde el propio notebook:
+
+```python
+# Una sola vez por entorno
+!pip install openpyxl ipywidgets matplotlib
+````
+
+---
+
+## 3. Configuración básica
+
+En la sección **1. IMPORTS Y CONFIGURACIÓN GENERAL** se definen:
+
+```python
+EXCEL_PATH = Path("/Users/macuser/Desktop/DIR COMERCIAL/GD/GD_v1.xlsx")
+
+SHEET_PROYECTOS = "ProyectosTI"
+SHEET_DATOS     = "Datos"
+SHEET_SUG       = "Sugerencias"
+```
+
+* Ajustar `EXCEL_PATH` a la ruta local donde se encuentre `GD_v1.xlsx`.
+* Mantener los nombres de hojas o modificarlos también en el código si cambian.
+
+También se definen:
+
+* Columnas clave de `ProyectosTI` (ID, Q, Estado, Nombre, Avance, etc.).
+* Rangos de columnas para **dependencias**:
+
+  * Flags P/L (R → BB)
+  * Descripciones (BC → CM)
+* Campos de métricas agregadas:
+
+  * `TOTAL_DEP`, `TOTAL_L`, `TOTAL_P`, `CUBRIMIENTO_DEP`, `RATING_PO_SYNC`.
+
+Y el estilo corporativo Telefónica (colores y logo).
+
+---
+
+## 4. Estructura funcional (capítulos del código)
+
+El notebook está organizado en capítulos:
+
+1. **Imports y configuración general**
+
+   * Rutas, nombres de hojas, columnas, estilos y carga de logo Telefónica.
+
+2. **Funciones básicas para Excel + utilidades**
+
+   * `load_workbook()`, `get_ws_*()`
+   * Búsqueda de cabeceras, listas únicas, siguiente ID de proyecto.
+   * Normalización de valores numéricos (`to_num_cell`).
+
+3. **Carga de catálogos y mapping de dependencias / trenes (hoja Datos)**
+
+   * Carga de:
+
+     * Estados, Q radicado, responsables, áreas, iniciativas estratégicas.
+     * Relación **Tren (Area/Tren/CoE)** ↔ **Célula** (`CELULA_TREN_MAP`).
+     * Mapping de dependencias: `DEP_MAPPING` (celula → columna de descripción).
+
+4. **Núcleo dependencias: agregados, semáforo, widget estrellas**
+
+   * `compute_dep_aggregates()`: calcula L, P, total y cobertura P/(L+P).
+   * `apply_dependencies_to_row()`: limpia y escribe flags + descripciones en la fila.
+   * `dep_semaforo()` y `build_semaforo_block()`: semáforo visual HTML.
+   * `create_star_rating_widget()`: widget de rating 1–5 estrellas para PO Sync.
+
+5. **Alta de proyectos (nuevo registro + dependencias)**
+
+   * `write_project_with_dependencies(project, dep_list)`:
+
+     * Inserta nueva fila con el proyecto.
+     * Aplica dependencias y escribe agregados CN–CQ.
+
+6. **Consultas / resúmenes**
+
+   * `get_all_project_names()`
+   * `summarize_by_equipo(equipo_name)`: resumen de cobertura P/L por equipo.
+   * `summarize_by_proyecto(nombre_proyecto)`: detalle de un proyecto (dependencias, avance, métricas, etc.).
+
+7. **Actualizar proyecto existente (avance + dependencias)**
+
+   * `update_project_row_and_dependencies(row, avance, estimado, dep_list)`:
+
+     * Actualiza AVANCE, ESTIMADO_AVANCE, PORC_CUMPLIMIENTO.
+     * Reescribe dependencias P/L + descripciones y agrega CN–CQ.
+
+8. **Cálculo de métricas agregadas (pestaña Métricas)**
+
+   * `compute_metrics(scope="all"|"area"|"celula", filter_value=None)`:
+
+     * Total dependencias L/P, cobertura, avance promedio global, por priorizados (SI/NO),
+       número de proyectos priorizados, etc.
+
+9. **UI – Header corporativo Telefónica**
+
+   * `build_header(title, subtitle)`:
+
+     * Cabecera reutilizable con logo, título y subtítulo.
+
+10. **UI – Alta de proyectos (pestaña 1)**
+
+    * `build_create_form()`:
+
+      * Formulario para crear proyectos:
+
+        * Datos básicos (nombre, estado, Q, priorización, responsable, área, iniciativa, fechas, línea base).
+        * Dependencias P/L dinámicas por Célula/Tren/CoE con descripción.
+        * Detección automática de Tren a partir de las células seleccionadas.
+      * Botón **Guardar en Excel**:
+
+        * Valida campos obligatorios.
+        * Inserta proyecto + dependencias.
+        * Muestra mensaje de éxito / error (incluyendo archivo bloqueado).
+
+11. **UI – Consulta + edición (pestaña 2)**
+
+    * `build_consult_panel()`:
+
+      * Modo **Por Equipo**:
+
+        * Consulta cobertura P/L para un equipo/célula.
+      * Modo **Por Proyecto**:
+
+        * Consulta detalle de dependencias.
+        * Edición de AVANCE / ESTIMADO y dependencias.
+        * Guardado de cambios con métricas recalculadas.
+      * Botones para limpiar filtros y recargar catálogos desde Excel.
+
+12. **UI – Métricas (pestaña 3)**
+
+    * `build_metrics_panel()`:
+
+      * Alcance:
+
+        * Todos los proyectos.
+        * Por Tren (Area/Tren/CoE).
+        * Por Célula / Equipo.
+      * Muestra texto resumen:
+
+        * Proyectos, total L/P, cobertura %, avance promedio global y por priorización.
+      * Gráfico de barras (Matplotlib) L vs P.
+      * Filtros limpiables + recarga de catálogos.
+
+13. **Lógica de Mesa de Expertos / Alistamiento**
+
+    * `_collect_board_projects(tren_filter=None)`:
+
+      * Trae proyectos **activos** (Nuevo / En curso) con datos para mesas:
+
+        * Contribución, iniciativa, dependencias P/L, cubrimiento, rating PO, etc.
+    * `_update_po_rating(row, rating_value)`:
+
+      * Actualiza `RATING_PO_SYNC` en Excel.
+    * `_update_expert_prioritization(row, priorizado)`:
+
+      * Actualiza columna `PRIORIZADO` (SI/NO) en Excel.
+
+14. **UI – Mesa de Expertos (pestaña 4)**
+
+    * `build_expert_board_panel()`:
+
+      * Filtros por Tren y Q.
+      * Listado de proyectos activos con resumen de estado de priorización.
+      * Detalle de proyecto seleccionado:
+
+        * Contribución, iniciativa estratégica, dependencias P/L + semáforo.
+      * Registro de decisión de Mesa de Expertos:
+
+        * `PRIORIZADO = "" | "SI" | "NO"`
+      * Botón **Guardar y siguiente** para ir avanzando proyecto a proyecto.
+
+15. **UI – Mesa de Alistamiento (PO Sync) (pestaña 5)**
+
+    * `build_po_sync_panel()`:
+
+      * Filtros por Tren, Q y opción “solo priorizados (PRI=SI)”.
+      * Estadísticas: total proyectos, con rating, pendientes.
+      * Vista de cada proyecto:
+
+        * Priorización previa, dependencia L/P, detalle de dependencias.
+      * Widget de rating 1–5 estrellas:
+
+        * Guardado de `RATING_PO_SYNC` en Excel.
+        * Avanza al siguiente proyecto.
+
+16. **Feedback – hoja Sugerencias (pestaña 6)**
+
+    * `_append_suggestion(usuario, texto)`: agrega filas a `Sugerencias`.
+    * `_get_last_suggestions(limit=5)`: devuelve últimas N sugerencias.
+    * `build_feedback_panel()`:
+
+      * Formulario Nombre + Sugerencia.
+      * Botón **Enviar** → registra en Excel.
+      * Histórico de las últimas sugerencias.
+
+17. **App Shell – Tabs principales**
+
+    * `build_main_app_tabs()`:
+
+      * Construye el `widgets.Tab` principal con las pestañas:
+
+        1. Alta proyectos
+        2. Consulta / edición
+        3. Métricas
+        4. Mesa Expertos
+        5. Mesa PO Sync
+        6. Feedback
+
+    * `show_gd_app()`:
+
+      * Muestra la app completa.
+      * Incluye botón para **recargar** la app y catálogos desde Excel.
+
+    * Bloque de **bootstrap**:
+
+      * Intenta ejecutar `show_gd_app()` automáticamente al correr la celda.
+
+---
+
+## 5. Cómo ejecutar la app
+
+1. Clonar el repositorio (cuando esté creado) o abrir el notebook donde vive este código.
+
+2. Verificar y ajustar la ruta de `EXCEL_PATH` en la sección de configuración.
+
+3. Asegurarse de que exista el archivo `GD_v1.xlsx` con las hojas:
+
+   * `ProyectosTI`
+   * `Datos`
+   * `Sugerencias` (se crea automáticamente si no existe).
+
+4. Instalar dependencias si hace falta:
+
+   ```python
+   !pip install openpyxl ipywidgets matplotlib
+   ```
+
+5. Ejecutar la celda que contiene todo el código.
+
+6. Si el bootstrap falla, ejecutar manualmente:
+
+   ```python
+   app = show_gd_app()
+   ```
+
+7. Utilizar las pestañas de la app:
+
+   * **Alta proyectos**: registrar nuevas iniciativas + dependencias P/L.
+   * **Consulta / edición**: revisar estado de cobertura y actualizar avance/dependencias.
+   * **Métricas**: sacar lectura rápida por Tren/Célula.
+   * **Mesa Expertos**: registrar decisiones de priorización.
+   * **Mesa PO Sync**: asignar rating de alistamiento 1–5.
+   * **Feedback**: recoger sugerencias para nuevas versiones.
+
+---
+
+## 6. Roadmap: evolución a front React con Codex
+
+La versión actual corre dentro de un Notebook. El siguiente paso para este repositorio es:
+
+1. **Extraer la lógica de negocio** (lectura/escritura a Excel, cálculos, métricas)
+   a un módulo Python reutilizable (p. ej. `gd_core/`).
+
+2. **Exponer un API ligera** (FastAPI / Flask) o adaptadores que Codex pueda invocar:
+
+   * Endpoints para:
+
+     * Alta de proyectos.
+     * Consulta de proyectos por equipo / proyecto.
+     * Cálculo de métricas.
+     * Operación de Mesas (listar proyectos, guardar decisiones/rating).
+     * Registro de sugerencias.
+
+3. **Crear un front en React** (app SPA):
+
+   * Páginas equivalentes a las pestañas actuales:
+
+     * Alta proyectos.
+     * Consulta / edición.
+     * Métricas.
+     * Mesa de Expertos.
+     * Mesa PO Sync.
+     * Feedback.
+   * Estilo alineado con Telefónica:
+
+     * Paleta de azules corporativos.
+     * Cards, semáforos y widgets de rating traducidos a componentes React.
+
+4. **Integrar Codex** como asistente de desarrollo para:
+
+   * Generar scaffolding de componentes.
+   * Declarar tipos (TypeScript) para las entidades (`Project`, `Dependency`, etc.).
+   * Sugerir validaciones, filtros avanzados y visualizaciones.
+
+5. **Futuras integraciones**:
+
+   * Migrar de Excel a una base de datos (SQL Server / Postgres).
+   * Autenticación corporativa (SSO).
+   * Integración con herramientas de gestión (Azure DevOps, GLPI, etc.).
+
+---
+
+## 7. Contribución y estilo de código
+
+* Mantener la estructura de capítulos para facilitar la lectura.
+* Evitar lógica duplicada entre UI y funciones de negocio:
+
+  * Toda la lógica de cálculo debe vivir en funciones reutilizables.
+* Documentar cambios relevantes en comentarios o en este README.
+* Probar siempre con el Excel cerrado (para evitar errores de archivo bloqueado).
+
+---
+
+## 8. Licencia
+
+Uso interno para la Gestión de Dependencias TI.
+La publicación externa o reutilización fuera del entorno corporativo debe revisarse
+según las políticas de la compañía.
+
+```
+```
