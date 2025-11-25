@@ -89,7 +89,14 @@ const AltaProyectos = () => {
     <SectionCard title="Alta de proyectos" subheader="Carga inicial con dependencias">
       <Grid container spacing={2}>
         <Grid item xs={12} sm={6}>
-          <TextField label="Nombre" fullWidth required value={form.name} onChange={(e) => onChange('name', e.target.value)} />
+          <TextField
+            label="Nombre"
+            fullWidth
+            required
+            value={form.name}
+            onChange={(e) => onChange('name', e.target.value)}
+            inputProps={{ 'aria-label': 'Nombre' }}
+          />
         </Grid>
         <Grid item xs={6} sm={3}>
           <TextField select label="Estado" fullWidth value={form.status} onChange={(e) => onChange('status', e.target.value)}>
@@ -140,6 +147,7 @@ const AltaProyectos = () => {
             minRows={2}
             value={form.description}
             onChange={(e) => onChange('description', e.target.value)}
+            inputProps={{ 'aria-label': 'Descripción' }}
           />
         </Grid>
         <Grid item xs={6} sm={3}>
@@ -151,6 +159,7 @@ const AltaProyectos = () => {
             value={form.startDate}
             onChange={(e) => onChange('startDate', e.target.value)}
             required
+            inputProps={{ 'aria-label': 'Fecha inicio' }}
           />
         </Grid>
         <Grid item xs={6} sm={3}>
@@ -162,6 +171,7 @@ const AltaProyectos = () => {
             value={form.endDate}
             onChange={(e) => onChange('endDate', e.target.value)}
             required
+            inputProps={{ 'aria-label': 'Fecha cierre' }}
           />
         </Grid>
         <Grid item xs={12} sm={3}>
@@ -219,6 +229,7 @@ const AltaProyectos = () => {
                 fullWidth
                 value={dep.description}
                 onChange={(e) => updateDependency(index, 'description', e.target.value)}
+                inputProps={{ 'aria-label': 'Descripción de dependencia' }}
               />
             </Grid>
             <Grid item xs={12} sm={2}>
