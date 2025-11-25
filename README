@@ -367,3 +367,34 @@ según las políticas de la compañía.
 
 ```
 ```
+
+---
+
+# Frontend SPA React (Vite + TS)
+
+Este repositorio ahora incluye una SPA en React + TypeScript para **GD_v1 – Gestión de Dependencias TI**.
+
+## Scripts
+- `npm install`
+- `npm run dev` → servidor de desarrollo (por defecto http://localhost:5173)
+- `npm run build` → build de producción
+- `npm run preview` → previsualizar build
+- `npm test` → ejecutar suite de Vitest + React Testing Library
+- `npm run check` → validación rápida de TypeScript
+
+## Modo mocks / API
+- Por defecto, en desarrollo puedes activar los mocks de API con la variable de entorno `VITE_USE_MOCKS=true`.
+- MSW monta el service worker con las rutas descritas en los requerimientos (projects, metrics, boards, feedback).
+- Para apuntar a una API real, define `VITE_API_BASE` y omite `VITE_USE_MOCKS`.
+
+## Estructura
+- `src/components/` → componentes reutilizables (layout, TrafficLight, StarRating, etc.)
+- `src/pages/` → páginas Alta, Consulta/Edición, Métricas, Mesas y Feedback
+- `src/api/` → clientes REST tipados
+- `src/hooks/` → hooks de datos
+- `src/mocks/` → datos de ejemplo + handlers MSW
+- `src/theme/` → tema corporativo Telefónica
+
+## Tests
+- Suite unitaria para componentes clave y pruebas de flujo (Alta de proyectos).
+- MSW se inicializa en `src/setupTests.ts`.
