@@ -26,6 +26,42 @@ que trabaja directamente con el archivo Excel corporativo y un frontend React
   npm install
   ```
 
+## Despliegue por entorno
+
+### Desarrollo local
+
+1. Requisitos: Python 3.11+, Node 18+ y un puerto libre 8000 (backend) y 5173 (frontend).
+2. Asegura que el Excel esté disponible en `data/GD_v1.xlsx` o define `GD_EXCEL_PATH` apuntando a la ruta corporativa.
+3. Desde la raíz del repo ejecuta una de las siguientes opciones:
+   ```bash
+   make dev
+   ```
+   Esto levanta FastAPI en `http://localhost:8000` y Vite en `http://localhost:5173` con recarga en caliente.
+
+   O, si prefieres un solo comando sin depender de `make`, usa:
+   ```bash
+   ./run.sh
+   ```
+   El script lanza backend y frontend en segundo plano y los detiene cuando presionas `Ctrl+C`.
+
+### Pruebas locales / CI
+
+1. Instala las dependencias de backend y frontend.
+2. (Opcional) Exporta `GD_EXCEL_PATH` si necesitas que las pruebas lean un Excel concreto; de lo contrario usarán el archivo de `data/`.
+3. Ejecuta toda la batería de tests:
+   ```bash
+   make test
+   ```
+
+### Producción
+
+1. Define `GD_EXCEL_PATH` con la ruta absoluta al Excel corporativo accesible para el servidor.
+2. Construye el frontend y arranca el backend sirviendo los estáticos generados:
+   ```bash
+   make prod
+   ```
+   Uvicorn expondrá la API y los archivos de `frontend/dist` en `http://0.0.0.0:8000`. Ajusta host/puerto añadiendo flags a `uvicorn` si tu plataforma lo requiere.
+
 ## Comandos principales (Makefile)
 
 - Desarrollo (backend + frontend con recarga):
