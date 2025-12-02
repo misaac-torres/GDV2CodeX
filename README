@@ -30,6 +30,7 @@ que trabaja directamente con el archivo Excel corporativo y un frontend React
 
 ### Desarrollo local
 
+##### codex/improve-header-contrast-and-add-logo-89tb2d
 1. Requisitos: Python 3.11+, Node 18+ y puertos libres 8000 (backend) y 5173 (frontend).
 2. Prepara el Excel: colócalo en `data/GD_v1.xlsx` **o** exporta `GD_EXCEL_PATH` apuntando a la ruta corporativa.
 3. Levanta backend y frontend desde la raíz del repo con una de estas opciones:
@@ -43,6 +44,15 @@ que trabaja directamente con el archivo Excel corporativo y un frontend React
      ./run.sh
      ```
      El script arranca backend y frontend en segundo plano y los detiene al presionar `Ctrl+C`.
+=======
+1. Requisitos: Python 3.11+, Node 18+ y un puerto libre 8000 (backend) y 5173 (frontend).
+2. Asegura que el Excel esté disponible en `data/GD_v1.xlsx` o define `GD_EXCEL_PATH` apuntando a la ruta corporativa.
+3. Desde la raíz del repo ejecuta:
+   ```bash
+   make dev
+   ```
+   Esto levanta FastAPI en `http://localhost:8000` y Vite en `http://localhost:5173` con recarga en caliente.
+###### main
 
 ### Pruebas locales / CI
 
